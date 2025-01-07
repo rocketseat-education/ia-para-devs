@@ -10,6 +10,7 @@ from langchain_core.prompts import PromptTemplate
 from langchain_core.runnables import RunnableSequence
 
 import os
+import json
 
 OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY")
 
@@ -63,3 +64,19 @@ def ask(question, llm):
     context = getRelevantDocs(question)
     response = sequence.invoke({"context": context,"question": question})
     return response
+
+
+def lambda_handler(event, context):
+    query = event.get("question")
+    response = ask(query, llm).content
+
+    return {
+        "statusCode": 200,
+        "headers": {
+            "Content-Type": "application/json"
+        },
+        "body": json.dumps({
+            "message": "Tarefa Concluída com sucesso",
+            "details": response,
+        })
+    }

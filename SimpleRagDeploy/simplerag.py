@@ -1,20 +1,14 @@
 #!/usr/bin/env python
 # coding: utf-8
 
-# ## Usando arquivo .env para controlar variaveis de ambiente
-# Para evitar exposição da chave `OPENAI_API_KEY` optei por utilizar arquivo `.env` com a informação da chave.
-# 
-# Para seguir o mesmo método basta criar um arquivo `.env` no mesmo diretório do arquivo `Solucao RAG.ipynb`.
-# A importação da chave será feita através da célula abaixo que faz a instalação de um biblioteca para carregar
-# os valores do arquivo `.env`.
-
-
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_openai import OpenAIEmbeddings
 from langchain_openai import ChatOpenAI
 from langchain_community.vectorstores import Chroma
 from langchain_community.document_loaders import PyPDFLoader
-from langchain.chains.question_answering import load_qa_chain
+from langchain_core.prompts import PromptTemplate
+from langchain_core.runnables import RunnableSequence
+
 import os
 
 OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY")
@@ -56,21 +50,16 @@ def getRelevantDocs(question):
     return context
 
 
-# Chain - Contrução da cadeira de prompt para chamada do LLM
-chain = load_qa_chain(llm, chain_type="stuff")
+def ask(question, llm):
+    TEMPLATE = """
+    Você é um especialista em legistalação e tecnologia. Responda a pergunta abaixo utilizando o contexto informado
 
-
-def ask(question):
-
-    answer = (chain({"input_documents": context, "question": question}, return_only_outputs=True))["output_text"]
-    return answer, context
-
-
-user_question = input("User: ")
-answer, context = ask(user_question)
-print("Answer: ", answer)
-
-
-for c in context:
-    print(c)
-
+    Contexto: {context}
+    
+    Pergunta: {question}
+    """
+    prompt = PromptTemplate(input_variables=["context", "question"], template=TEMPLATE)
+    sequence = RunnableSequence(prompt | llm)
+    context = getRelevantDocs(question)
+    response = sequence.invoke({"context": context,"question": question})
+    return response

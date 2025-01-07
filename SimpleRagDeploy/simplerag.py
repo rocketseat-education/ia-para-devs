@@ -67,7 +67,8 @@ def ask(question, llm):
 
 
 def lambda_handler(event, context):
-    query = event.get("question")
+    body = json.loads(event.get("body", {}))
+    query = body.get("question")
     response = ask(query, llm).content
 
     return {
